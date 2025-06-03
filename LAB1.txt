@@ -1,0 +1,626 @@
+ZAD1.
+using System;
+
+class Samochod
+{
+    private string marka;
+    private string model;
+    private int iloscDrzwi;
+    private double pojemnoscSilnika;
+    private double srednieSpalanie;
+    private static int iloscSamochodow = 0;
+
+    public string Marka { get => marka; set => marka = value; }
+    public string Model { get => model; set => model = value; }
+    public int IloscDrzwi { get => iloscDrzwi; set => iloscDrzwi = value; }
+    public double PojemnoscSilnika { get => pojemnoscSilnika; set => pojemnoscSilnika = value; }
+    public double SrednieSpalanie { get => srednieSpalanie; set => srednieSpalanie = value; }
+
+    public Samochod()
+    {
+        marka = "nieznana";
+        model = "nieznany";
+        iloscDrzwi = 0;
+        pojemnoscSilnika = 0.0;
+        srednieSpalanie = 0.0;
+        iloscSamochodow++;
+    }
+
+    public Samochod(string marka_, string model_, int iloscDrzwi_, double pojemnoscSilnika_, double srednieSpalanie_)
+    {
+        marka = marka_;
+        model = model_;
+        iloscDrzwi = iloscDrzwi_;
+        pojemnoscSilnika = pojemnoscSilnika_;
+        srednieSpalanie = srednieSpalanie_;
+        iloscSamochodow++;
+    }
+
+    private double ObliczSpalanie(double dlugoscTrasy)
+    {
+        return (srednieSpalanie * dlugoscTrasy) / 100.0;
+    }
+
+    public double ObliczKosztPrzejazdu(double dlugoscTrasy, double cenaPaliwa)
+    {
+        return ObliczSpalanie(dlugoscTrasy) * cenaPaliwa;
+    }
+
+    public void WypiszInfo()
+    {
+        Console.WriteLine("Marka: " + marka);
+        Console.WriteLine("Model: " + model);
+        Console.WriteLine("Ilość drzwi: " + iloscDrzwi);
+        Console.WriteLine("Pojemność silnika: " + pojemnoscSilnika + " cm³");
+        Console.WriteLine("Średnie spalanie: " + srednieSpalanie + " L/100km");
+        Console.WriteLine();
+    }
+
+    public static void WypiszIloscSamochodow()
+    {
+        Console.WriteLine("Liczba utworzonych samochodów: " + iloscSamochodow);
+    }
+}
+
+class Program
+{
+    static void Main()
+    {
+        Samochod s1 = new Samochod();
+        s1.WypiszInfo();
+
+        s1.Marka = "Fiat";
+        s1.Model = "126p";
+        s1.IloscDrzwi = 2;
+        s1.PojemnoscSilnika = 650;
+        s1.SrednieSpalanie = 6.0;
+        s1.WypiszInfo();
+
+        Samochod s2 = new Samochod("Syrena", "105", 2, 800, 7.6);
+        s2.WypiszInfo();
+
+        double kosztPrzejazdu = s2.ObliczKosztPrzejazdu(30.5, 4.85);
+        Console.WriteLine("Koszt przejazdu: " + kosztPrzejazdu + " PLN");
+
+        Samochod.WypiszIloscSamochodow();
+        Console.ReadKey();
+    }
+}
+
+--------------------------------------------------------------------------------------------------------------------------------------
+
+ZAD2.
+using System;
+
+class Samochod
+{
+    private string marka;
+    private string model;
+    private int iloscDrzwi;
+    private int pojemnoscSilnika;
+    private double srednieSpalanie;
+    private static int liczbaSamochodow = 0;
+
+    public Samochod(string marka, string model, int iloscDrzwi, int pojemnoscSilnika, double srednieSpalanie)
+    {
+        this.marka = marka;
+        this.model = model;
+        this.iloscDrzwi = iloscDrzwi;
+        this.pojemnoscSilnika = pojemnoscSilnika;
+        this.srednieSpalanie = srednieSpalanie;
+        liczbaSamochodow++;
+    }
+
+    public double ObliczSpalanie(double dlugoscTrasy)
+    {
+        return (srednieSpalanie * dlugoscTrasy) / 100;
+    }
+
+    public double ObliczKosztPrzejazdu(double dlugoscTrasy, double cenaPaliwa)
+    {
+        return ObliczSpalanie(dlugoscTrasy) * cenaPaliwa;
+    }
+
+    public void WypiszInfo()
+    {
+        Console.WriteLine($"Marka: {marka}, Model: {model}, Drzwi: {iloscDrzwi}, Poj. Silnika: {pojemnoscSilnika} cm³, Średnie spalanie: {srednieSpalanie} l/100km");
+    }
+
+    public static void WypiszIloscSamochodow()
+    {
+        Console.WriteLine($"Liczba samochodów: {liczbaSamochodow}");
+    }
+}
+
+class Garaz
+{
+    private string adres;
+    private int pojemnosc;
+    private int liczbaSamochodow = 0;
+    private Samochod[] samochody;
+
+    public string Adres
+    {
+        get { return adres; }
+        set { adres = value; }
+    }
+
+    public int Pojemnosc
+    {
+        get { return pojemnosc; }
+        set
+        {
+            pojemnosc = value;
+            samochody = new Samochod[pojemnosc];
+        }
+    }
+
+    public Garaz()
+    {
+        adres = "nieznany";
+        pojemnosc = 0;
+        samochody = null;
+    }
+
+    public Garaz(string adres_, int pojemnosc_)
+    {
+        adres = adres_;
+        Pojemnosc = pojemnosc_;
+    }
+
+    public void WprowadzSamochod(Samochod s)
+    {
+        if (liczbaSamochodow >= pojemnosc)
+        {
+            Console.WriteLine("Garaż jest pełny, nie można dodać samochodu.");
+        }
+        else
+        {
+            samochody[liczbaSamochodow] = s;
+            liczbaSamochodow++;
+        }
+    }
+
+    public Samochod WyprowadzSamochod()
+    {
+        if (liczbaSamochodow == 0)
+        {
+            Console.WriteLine("Garaż jest pusty, brak samochodów do wyprowadzenia.");
+            return null;
+        }
+        else
+        {
+            liczbaSamochodow--;
+            Samochod usunietySamochod = samochody[liczbaSamochodow];
+            samochody[liczbaSamochodow] = null;
+            return usunietySamochod;
+        }
+    }
+
+    public void WypiszInfo()
+    {
+        Console.WriteLine($"Adres garażu: {adres}, Pojemność: {pojemnosc}, Liczba samochodów: {liczbaSamochodow}");
+        for (int i = 0; i < liczbaSamochodow; i++)
+        {
+            samochody[i].WypiszInfo();
+        }
+    }
+}
+
+class Program
+{
+    static void Main()
+    {
+        Samochod s1 = new Samochod("Fiat", "126p", 2, 650, 6.0);
+        Samochod s2 = new Samochod("Syrena", "105", 2, 800, 7.6);
+
+        Garaz g1 = new Garaz();
+        g1.Adres = "ul. Garażowa 1";
+        g1.Pojemnosc = 1;
+
+        Garaz g2 = new Garaz("ul. Garażowa 2", 2);
+
+        g1.WprowadzSamochod(s1);
+        g1.WypiszInfo();
+
+        g1.WprowadzSamochod(s2); // Garaż pełny
+
+        g2.WprowadzSamochod(s2);
+        g2.WprowadzSamochod(s1);
+        g2.WypiszInfo();
+
+        g2.WyprowadzSamochod();
+        g2.WypiszInfo();
+
+        g2.WyprowadzSamochod();
+        g2.WyprowadzSamochod(); // Garaż pusty
+
+        Console.ReadKey();
+    }
+}
+
+--------------------------------------------------------------------------------------------------------------------------------------
+
+ZAD 3.
+using System;
+using System.IO;
+
+class Program
+{
+    static void Main()
+    {
+        string filePath = "C:\\Users\\szymo\\OneDrive\\Pulpit\\TEST.txt"; 
+
+        try
+        {
+            using (FileStream fileStream = new FileStream(filePath, FileMode.Open, FileAccess.Read))
+            using (StreamReader reader = new StreamReader(fileStream))
+            {
+                string content = reader.ReadToEnd();
+                Console.WriteLine(content);
+            }
+        }
+        catch (FileNotFoundException)
+        {
+            Console.WriteLine("Plik nie został znaleziony.");
+        }
+        catch (IOException e)
+        {
+            Console.WriteLine("Wystąpił błąd wejścia/wyjścia: " + e.Message);
+        }
+    }
+}
+
+--------------------------------------------------------------------------------------------------------------------------------------
+
+ZAD 4.
+using System;
+using System.IO;
+
+class Program
+{
+    static void Main()
+    {
+        string filePath = @"C:\\Users\\szymo\\OneDrive\\Pulpit\\TEST.txt"; // Ścieżka do pliku
+
+        try
+        {
+            using (FileStream fileStream = new FileStream(filePath, FileMode.Open, FileAccess.Read))
+            using (StreamReader reader = new StreamReader(fileStream))
+            {
+                string line;
+                while ((line = reader.ReadLine()) != null)
+                {
+                    string reversedLine = ReverseString(line);
+                    Console.WriteLine(reversedLine);
+                }
+            }
+        }
+        catch (FileNotFoundException)
+        {
+            Console.WriteLine("Plik nie został znaleziony.");
+        }
+        catch (IOException e)
+        {
+            Console.WriteLine("Wystąpił błąd wejścia/wyjścia: " + e.Message);
+        }
+    }
+
+    static string ReverseString(string input)
+    {
+        char[] charArray = input.ToCharArray();
+        Array.Reverse(charArray);
+        return new string(charArray);
+    }
+}
+
+--------------------------------------------------------------------------------------------------------------------------------------
+
+ZAD 5.
+using System;
+using System.IO;
+
+[Serializable]
+class DaneUzytkownika
+{
+    public string Imie { get; set; }
+    public int Wiek { get; set; }
+    public string Adres { get; set; }
+}
+
+class Program
+{
+    static void Main()
+    {
+        string sciezkaPliku = "dane_uzytkownika.dat";
+
+        Console.WriteLine("Wybierz opcję:");
+        Console.WriteLine("1 - Zapisz dane do pliku");
+        Console.WriteLine("2 - Odczytaj dane z pliku");
+        string wybor = Console.ReadLine();
+
+        if (wybor == "1")
+        {
+            ZapiszDane(sciezkaPliku);
+        }
+        else if (wybor == "2")
+        {
+            OdczytajDane(sciezkaPliku);
+        }
+        else
+        {
+            Console.WriteLine("Niepoprawny wybór.");
+        }
+    }
+
+    static void ZapiszDane(string sciezkaPliku)
+    {
+        Console.Write("Podaj imię: ");
+        string imie = Console.ReadLine();
+        Console.Write("Podaj wiek: ");
+        int wiek = int.Parse(Console.ReadLine());
+        Console.Write("Podaj adres: ");
+        string adres = Console.ReadLine();
+
+        using (FileStream strumienPliku = new FileStream(sciezkaPliku, FileMode.Create, FileAccess.Write))
+        using (BinaryWriter pisarz = new BinaryWriter(strumienPliku))
+        {
+            pisarz.Write(imie);
+            pisarz.Write(wiek);
+            pisarz.Write(adres);
+        }
+        Console.WriteLine("Dane zostały zapisane do pliku.");
+    }
+
+    static void OdczytajDane(string sciezkaPliku)
+    {
+        if (!File.Exists(sciezkaPliku))
+        {
+            Console.WriteLine("Plik nie istnieje.");
+            return;
+        }
+
+        using (FileStream strumienPliku = new FileStream(sciezkaPliku, FileMode.Open, FileAccess.Read))
+        using (BinaryReader czytelnik = new BinaryReader(strumienPliku))
+        {
+            string imie = czytelnik.ReadString();
+            int wiek = czytelnik.ReadInt32();
+            string adres = czytelnik.ReadString();
+
+            Console.WriteLine("Odczytane dane:");
+            Console.WriteLine($"Imię: {imie}");
+            Console.WriteLine($"Wiek: {wiek}");
+            Console.WriteLine($"Adres: {adres}");
+        }
+    }
+}
+--------------------------------------------------------------------------------------------------------------------------------------
+ZAD 6.
+using System;
+using System.IO;
+
+class Program
+{
+    static void Main()
+    {
+        Console.Write("Podaj ścieżkę do pliku źródłowego: ");
+        string sciezkaZrodlowa = Console.ReadLine();
+
+        Console.Write("Podaj ścieżkę do pliku docelowego: ");
+        string sciezkaDocelowa = Console.ReadLine();
+
+        try
+        {
+            using (FileStream strumienWejsciowy = new FileStream(sciezkaZrodlowa, FileMode.Open, FileAccess.Read))
+            using (FileStream strumienWyjsciowy = new FileStream(sciezkaDocelowa, FileMode.Create, FileAccess.Write))
+            {
+                strumienWejsciowy.CopyTo(strumienWyjsciowy);
+            }
+            Console.WriteLine("Plik został skopiowany pomyślnie.");
+        }
+        catch (FileNotFoundException)
+        {
+            Console.WriteLine("Plik źródłowy nie został znaleziony.");
+        }
+        catch (IOException e)
+        {
+            Console.WriteLine("Wystąpił błąd wejścia/wyjścia: " + e.Message);
+        }
+    }
+}
+-------------------------------------------------------------------------------------------------------------------------------------
+ZAD 7.
+using System;
+using System.Diagnostics;
+using System.IO;
+
+class Program
+{
+    static void Main()
+    {
+        string sciezkaZrodlowa = "testowy_plik_300MB.dat";
+        string sciezkaDocelowa = "kopia_plik_300MB.dat";
+
+        GenerujPlikTestowy(sciezkaZrodlowa, 300 * 1024 * 1024); // 300MB
+
+        Console.WriteLine("Rozpoczynam testy wydajności kopiowania plików...");
+
+        MierzCzasKopiowania(sciezkaZrodlowa, sciezkaDocelowa, KopiujFileStream);
+        MierzCzasKopiowania(sciezkaZrodlowa, sciezkaDocelowa, KopiujFileCopy);
+        MierzCzasKopiowania(sciezkaZrodlowa, sciezkaDocelowa, KopiujBufferedStream);
+    }
+
+    static void GenerujPlikTestowy(string sciezka, int rozmiar)
+    {
+        byte[] dane = new byte[1024 * 1024]; // 1MB bufor
+        Random rnd = new Random();
+
+        using (FileStream fs = new FileStream(sciezka, FileMode.Create, FileAccess.Write))
+        {
+            for (int i = 0; i < rozmiar / dane.Length; i++)
+            {
+                rnd.NextBytes(dane);
+                fs.Write(dane, 0, dane.Length);
+            }
+        }
+        Console.WriteLine("Plik testowy wygenerowany.");
+    }
+
+    static void MierzCzasKopiowania(string zrodlo, string cel, Action<string, string> metodaKopiowania)
+    {
+        Stopwatch stopwatch = new Stopwatch();
+        stopwatch.Start();
+        metodaKopiowania(zrodlo, cel);
+        stopwatch.Stop();
+        Console.WriteLine($"Czas kopiowania ({metodaKopiowania.Method.Name}): {stopwatch.ElapsedMilliseconds} ms");
+    }
+
+    static void KopiujFileStream(string zrodlo, string cel)
+    {
+        using (FileStream strumienWejsciowy = new FileStream(zrodlo, FileMode.Open, FileAccess.Read))
+        using (FileStream strumienWyjsciowy = new FileStream(cel, FileMode.Create, FileAccess.Write))
+        {
+            strumienWejsciowy.CopyTo(strumienWyjsciowy);
+        }
+    }
+
+    static void KopiujFileCopy(string zrodlo, string cel)
+    {
+        File.Copy(zrodlo, cel, true);
+    }
+
+    static void KopiujBufferedStream(string zrodlo, string cel)
+    {
+        using (FileStream strumienWejsciowy = new FileStream(zrodlo, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, FileOptions.SequentialScan))
+        using (BufferedStream buforWejsciowy = new BufferedStream(strumienWejsciowy))
+        using (FileStream strumienWyjsciowy = new FileStream(cel, FileMode.Create, FileAccess.Write, FileShare.None, 4096, FileOptions.SequentialScan))
+        using (BufferedStream buforWyjsciowy = new BufferedStream(strumienWyjsciowy))
+        {
+            buforWejsciowy.CopyTo(buforWyjsciowy);
+        }
+    }
+}
+-------------------------------------------------------------------------------------------------------------------------------------
+ZAD. Projekt 
+
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Text.Json;
+
+[Serializable]
+class Zadanie
+{
+    public int Id { get; set; }
+    public string Nazwa { get; set; }
+    public string Opis { get; set; }
+    public DateTime DataZakonczenia { get; set; }
+    public bool CzyWykonane { get; set; }
+}
+
+class ManagerZadan
+{
+    private List<Zadanie> listaZadan = new List<Zadanie>();
+    private const string PlikJSON = "zadania.json";
+
+    public void DodajZadanie(Zadanie zadanie)
+    {
+        zadanie.Id = listaZadan.Count > 0 ? listaZadan.Max(z => z.Id) + 1 : 1;
+        listaZadan.Add(zadanie);
+        Console.WriteLine("Dodano zadanie.");
+    }
+
+    public void UsunZadanie(int id)
+    {
+        var zadanie = listaZadan.FirstOrDefault(z => z.Id == id);
+        if (zadanie != null)
+        {
+            listaZadan.Remove(zadanie);
+            Console.WriteLine("Zadanie usunięte.");
+        }
+        else
+        {
+            Console.WriteLine("Nie znaleziono zadania o podanym ID.");
+        }
+    }
+
+    public void WyswietlZadania()
+    {
+        foreach (var zadanie in listaZadan)
+        {
+            Console.WriteLine($"[{zadanie.Id}] {zadanie.Nazwa} - {zadanie.Opis} (Do: {zadanie.DataZakonczenia.ToShortDateString()}), Wykonane: {zadanie.CzyWykonane}");
+        }
+    }
+
+    public void ZapiszDoPliku()
+    {
+        File.WriteAllText(PlikJSON, JsonSerializer.Serialize(listaZadan, new JsonSerializerOptions { WriteIndented = true }));
+        Console.WriteLine("Lista zadań została zapisana do pliku.");
+    }
+
+    public void WczytajZPliku()
+    {
+        if (File.Exists(PlikJSON))
+        {
+            listaZadan = JsonSerializer.Deserialize<List<Zadanie>>(File.ReadAllText(PlikJSON)) ?? new List<Zadanie>();
+            Console.WriteLine("Lista zadań została wczytana.");
+        }
+        else
+        {
+            Console.WriteLine("Plik nie istnieje.");
+        }
+    }
+}
+
+class Program
+{
+    static void Main()
+    {
+        ManagerZadan manager = new ManagerZadan();
+        manager.WczytajZPliku();
+        
+        while (true)
+        {
+            Console.WriteLine("1 - Dodaj zadanie");
+            Console.WriteLine("2 - Usuń zadanie");
+            Console.WriteLine("3 - Wyświetl zadania");
+            Console.WriteLine("4 - Zapisz do pliku");
+            Console.WriteLine("5 - Wczytaj z pliku");
+            Console.WriteLine("6 - Wyjdź");
+            Console.Write("Wybierz opcję: ");
+            
+            switch (Console.ReadLine())
+            {
+                case "1":
+                    Console.Write("Nazwa: ");
+                    string nazwa = Console.ReadLine();
+                    Console.Write("Opis: ");
+                    string opis = Console.ReadLine();
+                    Console.Write("Data zakończenia (YYYY-MM-DD): ");
+                    DateTime dataZakonczenia = DateTime.Parse(Console.ReadLine());
+                    
+                    manager.DodajZadanie(new Zadanie { Nazwa = nazwa, Opis = opis, DataZakonczenia = dataZakonczenia, CzyWykonane = false });
+                    break;
+                case "2":
+                    Console.Write("Podaj ID zadania do usunięcia: ");
+                    manager.UsunZadanie(int.Parse(Console.ReadLine()));
+                    break;
+                case "3":
+                    manager.WyswietlZadania();
+                    break;
+                case "4":
+                    manager.ZapiszDoPliku();
+                    break;
+                case "5":
+                    manager.WczytajZPliku();
+                    break;
+                case "6":
+                    return;
+                default:
+                    Console.WriteLine("Niepoprawny wybór.");
+                    break;
+            }
+        }
+    }
+}

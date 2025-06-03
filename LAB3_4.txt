@@ -1,0 +1,434 @@
+ZAD1
+using System;
+using System.Text;
+using System.Windows.Forms;
+using System.Security.Cryptography;
+using System.Diagnostics;
+using System.Linq;
+
+namespace SzyfrowanieSymetryczne
+{
+    static class Program
+    {
+        [STAThread]
+        static void Main()
+        {
+            ApplicationConfiguration.Initialize();
+            Application.Run(new OknoGlowne());
+        }
+    }
+
+    public class OknoGlowne : Form
+    {
+        private ComboBox listaAlgorytmow;
+        private Button przyciskGeneruj, przyciskSzyfruj, przyciskDeszyfruj, przyciskCzasSzyfrowania, przyciskCzasDeszyfrowania;
+        private TextBox poleKlucz, poleIV;
+        private TextBox poleJawnyAscii, poleJawnyHex;
+        private TextBox poleSzyfrogramAscii, poleSzyfrogramHex;
+        private Label etykietaCzasSzyfrowania, etykietaCzasDeszyfrowania;
+
+        private SymmetricAlgorithm algorytm;
+        private byte[] daneJawne, daneZaszyfrowane;
+        private TimeSpan czasSzyfrowania, czasDeszyfrowania;
+
+        private bool aktualizujePola = false;
+
+        public OknoGlowne()
+        {
+            Text = "Test szyfrowania symetrycznego";
+            Width = 800;
+            Height = 500;
+            UtworzKomponenty();
+        }
+
+        private void UtworzKomponenty()
+        {
+            listaAlgorytmow = new ComboBox { Left = 20, Top = 20, Width = 150, DropDownStyle = ComboBoxStyle.DropDownList };
+            listaAlgorytmow.Items.AddRange(new[] { "DES", "TripleDES", "RC2", "Rijndael", "AES" });
+            listaAlgorytmow.SelectedIndex = 0;
+
+            przyciskGeneruj = new Button { Left = 200, Top = 20, Width = 140, Text = "Generuj klucz i IV" };
+            przyciskGeneruj.Click += Generuj_Click;
+
+            poleKlucz = new TextBox { Left = 20, Top = 60, Width = 300, ReadOnly = true, PlaceholderText = "Klucz (Hex)" };
+            poleIV = new TextBox { Left = 20, Top = 90, Width = 300, ReadOnly = true, PlaceholderText = "IV (Hex)" };
+
+            przyciskSzyfruj = new Button { Left = 20, Top = 140, Width = 100, Text = "Szyfruj" };
+            przyciskSzyfruj.Click += Szyfruj_Click;
+
+            poleJawnyAscii = new TextBox { Left = 140, Top = 140, Width = 300, PlaceholderText = "Tekst jawny ASCII" };
+            poleJawnyHex = new TextBox { Left = 460, Top = 140, Width = 300, PlaceholderText = "Tekst jawny HEX" };
+            poleJawnyAscii.TextChanged += PoleAscii_TextChanged;
+            poleJawnyHex.TextChanged += PoleHex_TextChanged;
+
+            przyciskDeszyfruj = new Button { Left = 20, Top = 190, Width = 100, Text = "Deszyfruj" };
+            przyciskDeszyfruj.Click += Deszyfruj_Click;
+
+            poleSzyfrogramAscii = new TextBox { Left = 140, Top = 190, Width = 300, PlaceholderText = "Szyfrogram ASCII" };
+            poleSzyfrogramHex = new TextBox { Left = 460, Top = 190, Width = 300, PlaceholderText = "Szyfrogram HEX" };
+
+            przyciskCzasSzyfrowania = new Button { Left = 20, Top = 240, Width = 140, Text = "Czas szyfrowania" };
+            przyciskCzasSzyfrowania.Click += PokazCzasSzyfrowania;
+            etykietaCzasSzyfrowania = new Label { Left = 180, Top = 245, Width = 600, AutoSize = true };
+
+            przyciskCzasDeszyfrowania = new Button { Left = 20, Top = 280, Width = 140, Text = "Czas deszyfrowania" };
+            przyciskCzasDeszyfrowania.Click += PokazCzasDeszyfrowania;
+            etykietaCzasDeszyfrowania = new Label { Left = 180, Top = 285, Width = 600, AutoSize = true };
+
+            Controls.AddRange(new Control[] {
+                listaAlgorytmow, przyciskGeneruj,
+                poleKlucz, poleIV,
+                przyciskSzyfruj, poleJawnyAscii, poleJawnyHex,
+                przyciskDeszyfruj, poleSzyfrogramAscii, poleSzyfrogramHex,
+                przyciskCzasSzyfrowania, etykietaCzasSzyfrowania,
+                przyciskCzasDeszyfrowania, etykietaCzasDeszyfrowania
+            });
+        }
+
+        private void PoleAscii_TextChanged(object sender, EventArgs e)
+        {
+            if (aktualizujePola) return;
+            try
+            {
+                aktualizujePola = true;
+                var bajty = Encoding.ASCII.GetBytes(poleJawnyAscii.Text ?? "");
+                poleJawnyHex.Text = ZamienNaHex(bajty);
+            }
+            finally
+            {
+                aktualizujePola = false;
+            }
+        }
+
+        private void PoleHex_TextChanged(object sender, EventArgs e)
+        {
+            if (aktualizujePola) return;
+            try
+            {
+                aktualizujePola = true;
+                var tekst = poleJawnyHex.Text.Replace(" ", "");
+                try
+                {
+                    var bajty = HexNaBajty(tekst);
+                    poleJawnyAscii.Text = Encoding.ASCII.GetString(bajty);
+                }
+                catch { }
+            }
+            finally
+            {
+                aktualizujePola = false;
+            }
+        }
+
+        private void Generuj_Click(object sender, EventArgs e)
+        {
+            algorytm = UtworzAlgorytm();
+            algorytm.GenerateKey();
+            algorytm.GenerateIV();
+            poleKlucz.Text = ZamienNaHex(algorytm.Key);
+            poleIV.Text = ZamienNaHex(algorytm.IV);
+        }
+
+        private void Szyfruj_Click(object sender, EventArgs e)
+        {
+            if (algorytm == null) { MessageBox.Show("Najpierw wygeneruj klucz i IV."); return; }
+
+            daneJawne = Encoding.ASCII.GetBytes(poleJawnyAscii.Text ?? "");
+            poleJawnyHex.Text = ZamienNaHex(daneJawne);
+
+            using var szyfrator = algorytm.CreateEncryptor();
+            var stoper = Stopwatch.StartNew();
+            daneZaszyfrowane = szyfrator.TransformFinalBlock(daneJawne, 0, daneJawne.Length);
+            stoper.Stop();
+            czasSzyfrowania = stoper.Elapsed;
+
+            poleSzyfrogramAscii.Text = Encoding.ASCII.GetString(daneZaszyfrowane);
+            poleSzyfrogramHex.Text = ZamienNaHex(daneZaszyfrowane);
+        }
+
+        private void Deszyfruj_Click(object sender, EventArgs e)
+        {
+            if (algorytm == null) { MessageBox.Show("Najpierw wygeneruj klucz i IV."); return; }
+
+            string hex = poleSzyfrogramHex.Text?.Replace(" ", "") ?? "";
+            try
+            {
+                daneZaszyfrowane = HexNaBajty(hex);
+            }
+            catch
+            {
+                MessageBox.Show("Nieprawidłowy szyfrogram (HEX).");
+                return;
+            }
+
+            using var deszyfrator = algorytm.CreateDecryptor();
+            var stoper = Stopwatch.StartNew();
+            var odszyfrowane = deszyfrator.TransformFinalBlock(daneZaszyfrowane, 0, daneZaszyfrowane.Length);
+            stoper.Stop();
+            czasDeszyfrowania = stoper.Elapsed;
+
+            poleJawnyAscii.Text = Encoding.ASCII.GetString(odszyfrowane);
+            poleJawnyHex.Text = ZamienNaHex(odszyfrowane);
+        }
+
+        private void PokazCzasSzyfrowania(object sender, EventArgs e)
+        {
+            etykietaCzasSzyfrowania.Text = $"Czas szyfrowania: {czasSzyfrowania.TotalMilliseconds} ms";
+        }
+
+        private void PokazCzasDeszyfrowania(object sender, EventArgs e)
+        {
+            etykietaCzasDeszyfrowania.Text = $"Czas deszyfrowania: {czasDeszyfrowania.TotalMilliseconds} ms";
+        }
+
+        private SymmetricAlgorithm UtworzAlgorytm()
+        {
+            return listaAlgorytmow.SelectedItem.ToString() switch
+            {
+                "DES" => DES.Create(),
+                "TripleDES" => TripleDES.Create(),
+                "RC2" => RC2.Create(),
+                "Rijndael" => Rijndael.Create(),
+                "AES" => Aes.Create(),
+                _ => throw new NotSupportedException("Nieobsługiwany algorytm")
+            };
+        }
+
+        private static string ZamienNaHex(byte[] dane)
+        {
+            return BitConverter.ToString(dane).Replace("-", "");
+        }
+
+        private static byte[] HexNaBajty(string tekstHex)
+        {
+            if (tekstHex.Length % 2 != 0)
+                throw new ArgumentException("HEX musi mieć parzystą długość");
+
+            return Enumerable.Range(0, tekstHex.Length / 2)
+                             .Select(i => Convert.ToByte(tekstHex.Substring(i * 2, 2), 16))
+                             .ToArray();
+        }
+    }
+}
+
+
+
+
+
+
+ZAD2
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
+using System.Security.Cryptography;
+
+class Program
+{
+    static void Main()
+    {
+        var algorithmNames = new List<string>
+        {
+            "AES (CSP) 128 bit",
+            "AES (CSP) 256 bit",
+            "AES Managed 128 bit",
+            "AES Managed 256 bit",
+            "Rijndael Managed 128 bit",
+            "Rijndael Managed 256 bit",
+            "DES 56 bit",
+            "3DES 168 bit"
+        };
+
+        var algorithms = new List<SymmetricAlgorithm>
+        {
+            new AesCryptoServiceProvider { KeySize = 128 },
+            new AesCryptoServiceProvider { KeySize = 256 },
+            new AesManaged { KeySize = 128 },
+            new AesManaged { KeySize = 256 },
+            new RijndaelManaged { KeySize = 128 },
+            new RijndaelManaged { KeySize = 256 },
+            new DESCryptoServiceProvider(),
+            new TripleDESCryptoServiceProvider()
+        };
+
+        var secondsPerBlock = new List<double>();
+        var bytesPerSecondRAM = new List<double>();
+        var bytesPerSecondHDD = new List<double>();
+
+        for (int i = 0; i < algorithms.Count; i++)
+        {
+            var algo = algorithms[i];
+            algo.Mode = CipherMode.CBC;
+            algo.Padding = PaddingMode.PKCS7;
+            algo.GenerateKey();
+            algo.GenerateIV();
+
+            var blockData = new byte[algo.BlockSize / 8];
+            var encryptor = algo.CreateEncryptor();
+
+            var sw = Stopwatch.StartNew();
+            for (int j = 0; j < 100000; j++)
+            {
+                encryptor.TransformFinalBlock(blockData, 0, blockData.Length);
+            }
+            sw.Stop();
+            double secPerBlock = sw.Elapsed.TotalSeconds / 100000.0;
+            secondsPerBlock.Add(secPerBlock);
+
+            bytesPerSecondRAM.Add(MeasureSpeed(algo, false));
+            bytesPerSecondHDD.Add(MeasureSpeed(algo, true));
+        }
+
+        Console.WriteLine();
+        Console.WriteLine("|                          | sekund/blok | Bajtów/s (RAM)    | Bajtów/s (HDD)    |");
+        Console.WriteLine("|--------------------------|--------------|--------------------|--------------------|");
+
+        for (int i = 0; i < algorithmNames.Count; i++)
+        {
+            string name = algorithmNames[i].PadRight(25);
+            string secPerBlockStr = secondsPerBlock[i].ToString("0.00000000").PadLeft(12);
+            string ramSpeedStr = bytesPerSecondRAM[i].ToString("N0").PadLeft(18);
+            string hddSpeedStr = bytesPerSecondHDD[i].ToString("N0").PadLeft(18);
+
+            Console.WriteLine($"| {name} | {secPerBlockStr} | {ramSpeedStr} | {hddSpeedStr} |");
+        }
+    }
+
+    static double MeasureSpeed(SymmetricAlgorithm algo, bool useDisk)
+    {
+        var buffer = new byte[1024 * 1024 * 10];
+        var key = algo.Key;
+        var iv = algo.IV;
+
+        using var inputStream = new MemoryStream(buffer);
+        using Stream outputStream = useDisk ? File.OpenWrite("tempfile.bin") : new MemoryStream();
+        using var cryptoStream = new CryptoStream(outputStream, algo.CreateEncryptor(key, iv), CryptoStreamMode.Write);
+
+        var sw = Stopwatch.StartNew();
+        inputStream.CopyTo(cryptoStream);
+        sw.Stop();
+
+        cryptoStream.FlushFinalBlock();
+
+        if (useDisk)
+        {
+            outputStream.Close();
+            File.Delete("tempfile.bin");
+        }
+
+        return buffer.Length / sw.Elapsed.TotalSeconds;
+    }
+}
+
+ZAD 3
+using System;
+using System.IO;
+using System.Security.Cryptography;
+
+public static class RsaFileEncryptor
+{
+    public static void UtworzKlucze(string sciezkaPubliczna, string sciezkaPrywatna)
+    {
+        using var rsa = RSA.Create(2048);
+        File.WriteAllText(sciezkaPubliczna, Convert.ToBase64String(rsa.ExportRSAPublicKey()));
+        File.WriteAllText(sciezkaPrywatna, Convert.ToBase64String(rsa.ExportRSAPrivateKey()));
+    }
+
+    public static void Szyfruj(string plikWejsciowy, string plikWyjsciowy, string sciezkaKluczaPublicznego)
+    {
+        using var aes = Aes.Create();
+        aes.GenerateKey();
+        aes.GenerateIV();
+
+        var publicKeyData = Convert.FromBase64String(File.ReadAllText(sciezkaKluczaPublicznego));
+        using var rsa = RSA.Create();
+        rsa.ImportRSAPublicKey(publicKeyData, out _);
+
+        var zaszyfrowanyKlucz = rsa.Encrypt(aes.Key, RSAEncryptionPadding.OaepSHA256);
+
+        using var zapis = new FileStream(plikWyjsciowy, FileMode.Create);
+        using var binWriter = new BinaryWriter(zapis);
+
+        binWriter.Write(zaszyfrowanyKlucz.Length);
+        binWriter.Write(zaszyfrowanyKlucz);
+        binWriter.Write(aes.IV.Length);
+        binWriter.Write(aes.IV);
+
+        using var cryptoStream = new CryptoStream(zapis, aes.CreateEncryptor(), CryptoStreamMode.Write);
+        using var odczyt = new FileStream(plikWejsciowy, FileMode.Open);
+        odczyt.CopyTo(cryptoStream);
+    }
+
+    public static void Deszyfruj(string plikZaszyfrowany, string plikOdszyfrowany, string sciezkaKluczaPrywatnego)
+    {
+        using var odczyt = new FileStream(plikZaszyfrowany, FileMode.Open);
+        using var binReader = new BinaryReader(odczyt);
+
+        var kluczDlugosc = binReader.ReadInt32();
+        var zaszyfrowanyKlucz = binReader.ReadBytes(kluczDlugosc);
+
+        var ivDlugosc = binReader.ReadInt32();
+        var iv = binReader.ReadBytes(ivDlugosc);
+
+        var privateKeyData = Convert.FromBase64String(File.ReadAllText(sciezkaKluczaPrywatnego));
+        using var rsa = RSA.Create();
+        rsa.ImportRSAPrivateKey(privateKeyData, out _);
+
+        var kluczAES = rsa.Decrypt(zaszyfrowanyKlucz, RSAEncryptionPadding.OaepSHA256);
+
+        using var aes = Aes.Create();
+        aes.Key = kluczAES;
+        aes.IV = iv;
+
+        using var cryptoStream = new CryptoStream(odczyt, aes.CreateDecryptor(), CryptoStreamMode.Read);
+        using var zapis = new FileStream(plikOdszyfrowany, FileMode.Create);
+        cryptoStream.CopyTo(zapis);
+    }
+}
+
+class Start
+{
+    static void Main()
+    {
+        string kluczPubliczny = "public.key";
+        string kluczPrywatny = "private.key";
+
+        Console.WriteLine("RSA - Szyfrowanie plików");
+        Console.WriteLine("1. Generuj klucze");
+        Console.WriteLine("2. Szyfruj plik");
+        Console.WriteLine("3. Deszyfruj plik");
+        Console.Write("Wybierz opcję: ");
+
+        var opcja = Console.ReadLine();
+
+        switch (opcja)
+        {
+            case "1":
+                RsaFileEncryptor.UtworzKlucze(kluczPubliczny, kluczPrywatny);
+                Console.WriteLine("Klucze zostały zapisane.");
+                break;
+
+            case "2":
+                Console.Write("Podaj ścieżkę do pliku do zaszyfrowania: ");
+                var sciezkaWe = Console.ReadLine();
+                Console.Write("Podaj ścieżkę zapisu pliku zaszyfrowanego: ");
+                var sciezkaZaszyfrowana = Console.ReadLine();
+                RsaFileEncryptor.Szyfruj(sciezkaWe, sciezkaZaszyfrowana, kluczPubliczny);
+                Console.WriteLine("Plik zaszyfrowano.");
+                break;
+
+            case "3":
+                Console.Write("Podaj ścieżkę do pliku zaszyfrowanego: ");
+                var sciezkaZaszyfrowanaWe = Console.ReadLine();
+                Console.Write("Podaj ścieżkę zapisu pliku odszyfrowanego: ");
+                var sciezkaOdszyfrowana = Console.ReadLine();
+                RsaFileEncryptor.Deszyfruj(sciezkaZaszyfrowanaWe, sciezkaOdszyfrowana, kluczPrywatny);
+                Console.WriteLine("Plik odszyfrowano.");
+                break;
+
+            default:
+                Console.WriteLine("Nieznana opcja.");
+                break;
+        }
+    }
+}

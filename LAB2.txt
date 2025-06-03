@@ -1,0 +1,163 @@
+ZAD 1.
+using System;
+using System.Diagnostics; 
+using System.Windows.Forms;
+namespace WinFormsApp2
+{
+    public partial class Form1 : Form
+    {
+        public Form1()
+        {
+            InitializeComponent();
+            btnDivide.Click += btnDivide_Click; 
+        }
+
+        private void btnDivide_Click(object sender, EventArgs e)
+        {
+            try
+            {
+          
+                double dzielna = double.Parse(txtDzielna.Text);
+                double dzielnik = double.Parse(txtDzielnik.Text);
+
+                
+                if (dzielnik == 0)
+                {
+                    throw new DivideByZeroException("Nie można dzielić przez zero.");
+                }
+
+                
+                double wynik = dzielna / dzielnik;
+                txtWynik.Text = wynik.ToString();
+            }
+            catch (FormatException ex)
+            {
+                LogError("Nieprawidłowy format liczby.", ex);
+                MessageBox.Show("Błąd: Wprowadź poprawne liczby.", "Błąd", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            catch (DivideByZeroException ex)
+            {
+                LogError("Próba dzielenia przez zero.", ex);
+                MessageBox.Show("Błąd: Nie można dzielić przez zero.", "Błąd", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            catch (Exception ex)
+            {
+                LogError("Nieznany błąd.", ex);
+                MessageBox.Show("Wystąpił nieoczekiwany błąd.", "Błąd", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void LogError(string message, Exception ex)
+        {
+            string logMessage = $"{message}\n{ex.Message}";
+
+            try
+            {
+                using (EventLog eventLog = new EventLog("Application"))
+                {
+                    eventLog.Source = "DzielenieAplikacja";
+                    eventLog.WriteEntry(logMessage, EventLogEntryType.Error);
+                }
+            }
+            catch (Exception)
+            {
+                MessageBox.Show("Błąd zapisu do dziennika zdarzeń.", "Błąd logowania", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+        }
+    }
+}
+ZAD 2.
+using System;
+using System.Diagnostics;
+using System.Windows.Forms;
+
+namespace Form2
+{
+    public partial class Form1 : Form
+    {
+        private string _currentInput = "";
+        private double _firstNumber = 0;
+        private string _operation = "";
+        private Stopwatch _stopwatch;
+
+        public Form1()
+        {
+            _stopwatch = Stopwatch.StartNew(); // Start pomiaru czasu
+            InitializeComponent();
+        }
+
+        private void ButtonClick(object sender, EventArgs e)
+        {
+            Button btn = sender as Button;
+            if (btn == null) return;
+
+            string buttonText = btn.Text;
+
+            if (buttonText == "C")
+            {
+                _currentInput = "";
+                _firstNumber = 0;
+                _operation = "";
+                txtDisplay.Text = "";
+            }
+            else if (buttonText == "=")
+            {
+                try
+                {
+                    double secondNumber = double.Parse(_currentInput);
+                    double result = 0;
+
+                    switch (_operation)
+                    {
+                        case "+": result = _firstNumber + secondNumber; break;
+                        case "-": result = _firstNumber - secondNumber; break;
+                        case "*": result = _firstNumber * secondNumber; break;
+                        case "/":
+                            if (secondNumber == 0) throw new DivideByZeroException("Nie można dzielić przez zero.");
+                            result = _firstNumber / secondNumber;
+                            break;
+                    }
+
+                    txtDisplay.Text = result.ToString();
+                    _currentInput = result.ToString();
+                    _operation = "";
+                }
+                catch (Exception ex)
+                {
+                    LogEvent("Błąd obliczeń: " + ex.Message);
+                    MessageBox.Show("Błąd obliczeń", "Błąd", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            }
+            else if ("+-*/".Contains(buttonText))
+            {
+                if (_currentInput != "")
+                {
+                    _firstNumber = double.Parse(_currentInput);
+                    _operation = buttonText;
+                    _currentInput = "";
+                }
+            }
+            else
+            {
+                _currentInput += buttonText;
+                txtDisplay.Text = _currentInput;
+            }
+        }
+
+        private void LogEvent(string message)
+        {
+            try
+            {
+                using (EventLog eventLog = new EventLog("Application"))
+                {
+                    eventLog.Source = "KalkulatorAplikacja";
+                    eventLog.WriteEntry(message, EventLogEntryType.Warning);
+                }
+            }
+            catch (Exception)
+            {
+                MessageBox.Show("Błąd zapisu do dziennika zdarzeń.", "Błąd logowania", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+        }
+    }
+}
